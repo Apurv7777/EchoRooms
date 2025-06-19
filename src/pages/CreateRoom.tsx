@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const CreateRoom: React.FC = () => {
   const [roomIdInput, setRoomIdInput] = useState("");
+  const [nameInput, setNameInput] = useState("");
   const [error, setError] = useState("");
   const { joinRoom } = useWS();
   const navigate = useNavigate();
@@ -15,13 +16,24 @@ const CreateRoom: React.FC = () => {
       setError("Room name is required");
       return;
     }
-    joinRoom(roomIdInput, () => navigate("/chat"));
+    if (!nameInput.trim()) {
+      setError("Name is required");
+      return;
+    }
+    joinRoom(roomIdInput, nameInput, () => navigate("/chat"));
   };
 
   return (
     <div className="page-container single-page">
       <h2>Create Room</h2>
-      <form className="form" onSubmit={handleSubmit}>
+      <form className="form" style={{display:'flex',alignItems:'center',flexDirection:'column'}} onSubmit={handleSubmit}>
+        <input
+          type="text"
+          placeholder="Your Name"
+          className="input"
+          value={nameInput}
+          onChange={e => setNameInput(e.target.value)}
+        />
         <input
           type="text"
           placeholder="Room Name"

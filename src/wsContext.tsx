@@ -6,8 +6,10 @@ type WSContextType = {
   ws: React.MutableRefObject<WebSocket | null>;
   roomId: string;
   setRoomId: (id: string) => void;
-  joinRoom: (id: string, cb?: () => void) => void;
+  joinRoom: (id: string, name: string, cb?: () => void) => void;
   disconnectRoom: () => void;
+  userName: string;
+  setUserName: (name: string) => void;
 };
 
 const WSContext = createContext<WSContextType | null>(null);
@@ -17,18 +19,21 @@ export const useWS = () => useContext(WSContext)!;
 export const WSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const ws = useRef<WebSocket | null>(null);
   const [roomId, setRoomId] = useState("");
+  const [userName, setUserName] = useState("");
 
-  const joinRoom = (id: string, cb?: () => void) => {
+  const joinRoom = (id: string, name: string, cb?: () => void) => {
     if (!ws.current || ws.current.readyState !== 1) {
       ws.current = new WebSocket(WS_URL);
       ws.current.onopen = () => {
-        ws.current?.send(JSON.stringify({ type: "join", payload: { roomId: id } }));
+        ws.current?.send(JSON.stringify({ type: "join", payload: { roomId: id, name } }));
         setRoomId(id);
+        setUserName(name);
         cb && cb();
       };
     } else {
-      ws.current.send(JSON.stringify({ type: "join", payload: { roomId: id } }));
+      ws.current.send(JSON.stringify({ type: "join", payload: { roomId: id, name } }));
       setRoomId(id);
+      setUserName(name);
       cb && cb();
     }
   };
@@ -42,7 +47,7 @@ export const WSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   return (
-    <WSContext.Provider value={{ ws, roomId, setRoomId, joinRoom, disconnectRoom }}>
+    <WSContext.Provider value={{ ws, roomId, setRoomId, joinRoom, disconnectRoom, userName, setUserName }}>
       {children}
     </WSContext.Provider>
   );
