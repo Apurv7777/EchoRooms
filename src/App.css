@@ -1,9 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
 
 body, html, #root {
   height: 100vh;
   width: 100vw;
-  min-height: 100vh;
   margin: 0;
   padding: 0;
   overflow: auto;
@@ -15,28 +15,15 @@ body, html, #root {
   font-family: 'Fira Mono', 'Consolas', 'Courier New', monospace;
 }
 
-.page-container {
-  background: #232323;
-  border-radius: 16px;
-  box-shadow: 0 0 24px 0 #00000044;
-  padding: 0.5rem 2.5rem;
-  max-width: 400px;
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin: auto;
-}
-
 .navbar {
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  align-items: center;
+  gap: 2.5rem;
   background: #111;
   padding: 1rem 1rem;
   border-radius: 16px 16px;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .nav-link {
@@ -44,29 +31,34 @@ body, html, #root {
   text-decoration: none;
   font-weight: bold;
   font-size: 1.1rem;
-  transition: color 0.2s;
+  transition: all 0.3s ease;
   font-family: 'Fira Mono', monospace;
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: 8px;
+  position: relative;
 }
 
 .nav-link.active {
-  color: #181818;
-  background: #fff;
-  border-radius: 6px;
-  padding: 0.25rem 1rem;
-  box-shadow: 0 0 8px #fff;
+  color: #fff;
+  padding: 0.5rem ;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px 8px;
+  font-weight: 900;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
 }
 
 .nav-link:hover {
-  color: #e0e0e0;
-  text-shadow: 0 0 8px #fff;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.form {
-  display: flex;
-  /* flex-direction: column; */
-  gap: 1rem;
-  margin-top: 1.5rem;
-  width: 100%;
+.nav-link:hover:not(.active) {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .input {
@@ -80,26 +72,6 @@ body, html, #root {
   outline: none;
   box-shadow: 0 0 8px #00000044;
   font-family: 'Fira Mono', monospace;
-}
-
-.btn-neon {
-  background: #fff;
-  color: #181818;
-  border: none;
-  border-radius: 8px;
-  padding: 0.35rem 0.6rem;
-  font-weight: bold;
-  font-size: 1rem;
-  width: 100%;
-  cursor: pointer;
-  box-shadow: 0 0 16px #00000044;
-  transition: background 0.2s, color 0.2s;
-  font-family: 'Fira Mono', monospace;
-}
-
-.btn-neon:hover {
-  background: #e0e0e0;
-  color: #111;
 }
 
 .chat-box {
@@ -116,41 +88,21 @@ body, html, #root {
 }
 
 /* Custom scrollbar for dark theme */
-.chat-box::-webkit-scrollbar {
+.chat-scrollbar::-webkit-scrollbar {
   width: 8px;
   background: #232323;
   border-radius: 8px;
 }
-.chat-box::-webkit-scrollbar-thumb {
+.chat-scrollbar::-webkit-scrollbar-thumb {
   background: #444;
   border-radius: 8px;
 }
-.chat-box::-webkit-scrollbar-thumb:hover {
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #666;
 }
 
 /* For Firefox */
-.chat-box {
+.chat-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #444 #232323;
-}
-
-.chat-message {
-  background: #232323;
-  color: #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-  box-shadow: 0 0 8px #00000044;
-  word-break: break-word;
-  font-family: 'Fira Mono', monospace;
-  max-width: 80%;
-  align-self: flex-start;
-}
-
-.chat-form {
-  display: flex;
-  padding-bottom: 6px;
-  gap: 0.5rem;
-  width: 100%;
 }

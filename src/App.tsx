@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
 import CreateRoom from "./pages/CreateRoom";
 import JoinRoom from "./pages/JoinRoom";
 import ChatRoom from "./pages/ChatRoom";
@@ -7,12 +7,12 @@ import "./App.css";
 
 const App: React.FC = () => {
   return (
-    <div className="container">
+    <div>
       <Router>
         <nav className="navbar">
-          <Link to="/create" className="nav-link">Create Room</Link>
-          <Link to="/join" className="nav-link">Join Room</Link>
-          <Link to="/chat" className="nav-link">Chat Room</Link>
+          <NavLink to="/create" className="nav-link">Create Room</NavLink>
+          <NavLink to="/join" className="nav-link">Join Room</NavLink>
+          <NavLink to="/chat" className="nav-link">Chat Room</NavLink>
         </nav>
         <Routes>
           <Route path="/create" element={<CreateRoom />} />
