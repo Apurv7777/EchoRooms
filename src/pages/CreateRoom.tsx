@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useWS } from "../wsContext";
+import { useWS } from "../context/WSContext";
 import { useNavigate } from "react-router-dom";
 
 const CreateRoom: React.FC = () => {
@@ -9,7 +9,7 @@ const CreateRoom: React.FC = () => {
   const { joinRoom } = useWS();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!roomIdInput.trim()) {
@@ -20,7 +20,13 @@ const CreateRoom: React.FC = () => {
       setError("Name is required");
       return;
     }
-    joinRoom(roomIdInput, nameInput, () => navigate("/chat"));
+    
+    try {
+      await joinRoom(roomIdInput, nameInput);
+      navigate("/chat");
+    } catch (error) {
+      setError("Failed to create room. Please try again.");
+    }
   };
 
   return (

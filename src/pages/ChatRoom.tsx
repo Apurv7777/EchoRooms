@@ -1,100 +1,49 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useWS } from "../wsContext";
+import { useWS } from "../context/WSContext";
+import { useAppSelector, useAppDispatch } from "../store/hooks";
+import { clearMessagesIfRoomEmpty } from "../store/wsSlice";
 import closeIcon from '../icons/close.svg';
 
-interface ChatMessage {
-  name: string;
-  message: string;
-}
-
 const ChatRoom: React.FC = () => {
-  const { ws, roomId, disconnectRoom, userName } = useWS();
+  const { disconnectRoom, sendMessage } = useWS();
+  const dispatch = useAppDispatch();
+  const { 
+    roomId, 
+    userName, 
+    messages, 
+    connectedUsers, 
+    currentUser, 
+    isConnected, 
+    isConnecting, 
+    error 
+  } = useAppSelector(state => state.ws);
   
-  // Initialize messages from localStorage
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const savedMessages = localStorage.getItem('echoroom_messages');
-    return savedMessages ? JSON.parse(savedMessages) : [];
-  });
   const [input, setInput] = useState("");
-  const [connectedUsers, setConnectedUsers] = useState<string[]>([]);
-  const [currentUser, setCurrentUser] = useState<string>("");
   const [showUsers, setShowUsers] = useState(false);
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
-  // Save messages to localStorage whenever messages change
-  useEffect(() => {
-    localStorage.setItem('echoroom_messages', JSON.stringify(messages));
-  }, [messages]);
-
-  useEffect(() => {
-    if (!ws.current || !roomId || !userName) return;
-    
-    // Define the message handler function
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('Received message:', data);
-        if (data && data.type === 'chat' && data.name && data.message) {
-          setMessages((prev) => [...prev, { name: data.name, message: data.message }]);
-        } else if (data && data.type === 'users') {
-          // Handle complete users list update with current user info
-          console.log('Updating connected users:', data.users);
-          setConnectedUsers(data.users || []);
-          if (data.currentUser) {
-            setCurrentUser(data.currentUser);
-          }
-        }
-      } catch {
-        // fallback for plain string messages
-        setMessages((prev) => [...prev, { name: "Unknown", message: event.data }]);
-      }
-    };
-
-    // Set the message handler
-    if (ws.current.readyState === WebSocket.OPEN) {
-      ws.current.onmessage = handleMessage;
-    } else if (ws.current.readyState === WebSocket.CONNECTING) {
-      // Wait for connection to open
-      ws.current.onopen = () => {
-        if (ws.current) {
-          ws.current.onmessage = handleMessage;
-        }
-      };
-    }
-    // eslint-disable-next-line
-  }, [roomId, userName, ws.current?.readyState]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      // Clear messages when component unmounts
-      if (!roomId) {
-        localStorage.removeItem('echoroom_messages');
-        setConnectedUsers([]); // Clear connected users list
-      }
-    };
-  }, [roomId]);
-
-  // Clear connected users when roomId changes or becomes empty
-  useEffect(() => {
-    if (!roomId) {
-      setConnectedUsers([]);
-      setCurrentUser("");
-    }
-  }, [roomId]);
-
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
   }, [messages]);
 
-  const sendMessage = (e: React.FormEvent) => {
+  // Clear messages if user is alone in the room and then disconnects
+  useEffect(() => {
+    if (roomId && connectedUsers.length === 1 && connectedUsers[0] === currentUser) {
+      // This user is alone in the room - messages will be cleared when they disconnect
+      console.log('User is alone in room, messages will be cleared on disconnect');
+    } else if (roomId && connectedUsers.length === 0) {
+      // Room is empty, clear messages
+      dispatch(clearMessagesIfRoomEmpty());
+    }
+  }, [connectedUsers, currentUser, roomId, dispatch]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (ws.current && input.trim() && roomId) {
-      ws.current.send(
-        JSON.stringify({ type: "chat", payload: { message: input, name: userName } })
-      );
+    if (input.trim() && roomId && isConnected) {
+      sendMessage(input);
       setInput("");
     }
   };
@@ -102,11 +51,27 @@ const ChatRoom: React.FC = () => {
   return (
     <div className="bg-[#232323] rounded-2xl shadow-[0_0_24px_0_#00000044] py-2 px-10 w-full max-w-[400px] min-h-[300px] flex flex-col items-center justify-center mx-auto">
       <h1 className="text-white font-mono text-2xl font-bold mb-6 text-center">Chat Room</h1>
+      
+      {/* Connection Status */}
+      {isConnecting && (
+        <div className="text-yellow-500 mb-3 text-center">
+          Connecting...
+        </div>
+      )}
+      
+      {error && (
+        <div className="text-red-500 mb-3 text-center">
+          {error}
+        </div>
+      )}
+      
       {roomId ? (
         <div className="w-full mb-4">
           <div className="flex justify-center w-full mb-2">
             <div className="text-white mb-3">
               Connected to room: <b>{roomId}</b>
+              {isConnected && <span className="text-green-500 ml-2">●</span>}
+              {!isConnected && <span className="text-red-500 ml-2">●</span>}
             </div>
             <button
               className="mb-4 flex bg-transparent border-0 text-red-500 items-center gap-1"
@@ -184,7 +149,7 @@ const ChatRoom: React.FC = () => {
           </div>
         ))}
       </div>
-      <form className="flex pb-1.5 gap-2 w-full mt-6" onSubmit={sendMessage}>
+      <form className="flex pb-1.5 gap-2 w-full mt-6" onSubmit={handleSendMessage}>
         <input
           type="text"
           className="flex-1 py-3 px-4 rounded-lg border-0 bg-[#181818] text-white text-base w-full outline-none shadow-[0_0_8px_#00000044] font-mono placeholder-gray-400"
