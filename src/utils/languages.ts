@@ -80,7 +80,7 @@ export const LANGUAGES: Language[] = [
 
 export function getLanguageName(code: string): string {
   const language = LANGUAGES.find(lang => lang.code === code);
-  return language ? language.name : code.toUpperCase();
+  return language ? language.name : "";
 }
 
 export function getAvailableLanguages(excludeCode?: string): Language[] {

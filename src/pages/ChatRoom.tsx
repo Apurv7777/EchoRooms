@@ -255,11 +255,6 @@ const ChatRoom: React.FC = () => {
           >
             <div className={`text-xs mb-1 font-bold ${msg.name === userName ? "text-[#90ee90]" : "text-[#cccccc]"}`}>
               {msg.name}
-              {msg.detectedLanguage && (
-                <span className="text-xs text-gray-400 ml-1 sm:ml-2">
-                  ({getLanguageName(msg.detectedLanguage)})
-                </span>
-              )}
               {msg.isTranslated && (
                 <span className="text-xs text-blue-400 ml-1 sm:ml-2">
                   [Translated]
