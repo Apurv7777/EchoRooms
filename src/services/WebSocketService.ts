@@ -6,6 +6,7 @@ import {
   addMessage,
   setError,
   clearMessagesIfRoomEmpty,
+  updateMessageTranslation,
 } from '../store/wsSlice';
 
 // const WS_URL = "wss://echorooms-backend.onrender.com";
@@ -14,11 +15,13 @@ const WS_URL = "ws://localhost:8080";
 export class WebSocketService {
   private ws: WebSocket | null = null;
   private dispatch: AppDispatch;
+  private getState: () => any;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
 
-  constructor(dispatch: AppDispatch) {
+  constructor(dispatch: AppDispatch, getState: () => any) {
     this.dispatch = dispatch;
+    this.getState = getState;
   }
 
   connect(roomId: string, userName: string): Promise<void> {
@@ -93,10 +96,25 @@ export class WebSocketService {
       switch (data.type) {
         case 'chat':
           if (data.name && data.message) {
-            this.dispatch(addMessage({
+            const message = {
               name: data.name,
-              message: data.message
-            }));
+              message: data.message,
+              id: `${Date.now()}_${Math.random()}`,
+              detectedLanguage: data.detectedLanguage
+            };
+            
+            // Check if auto-translation is enabled and we have a preferred language
+            const state = this.getState();
+            const { autoTranslate, preferredLanguage } = state.ws;
+            
+            // Only auto-translate incoming messages (not from current user)
+            if (autoTranslate && preferredLanguage && data.detectedLanguage && 
+                data.detectedLanguage !== preferredLanguage && data.name !== state.ws.userName) {
+              // Auto-translate the incoming message
+              this.translateMessage(message.id, data.message, preferredLanguage);
+            }
+            
+            this.dispatch(addMessage(message));
           }
           break;
 
@@ -110,6 +128,29 @@ export class WebSocketService {
           if ((data.users || []).length === 0) {
             this.dispatch(clearMessagesIfRoomEmpty());
           }
+          break;
+
+        case 'translationResult':
+          this.dispatch(updateMessageTranslation({
+            messageId: data.messageId,
+            translatedText: data.translatedText,
+            detectedLanguage: data.detectedLanguage,
+            isTranslated: true
+          }));
+          break;
+
+        case 'translationError':
+          console.error('Translation error:', data.error);
+          this.dispatch(setError(`Translation failed: ${data.error}`));
+          break;
+
+        case 'languageDetected':
+          // Handle language detection result if needed
+          console.log('Language detected:', data.detectedLanguage, data.languageName);
+          break;
+
+        case 'languageDetectionError':
+          console.error('Language detection error:', data.error);
           break;
 
         default:
@@ -136,9 +177,31 @@ export class WebSocketService {
   }
 
   sendChatMessage(message: string, userName: string) {
+    // Send message as-is without any translation
     this.sendMessage({
       type: "chat",
       payload: { message, name: userName }
+    });
+  }
+
+  translateMessage(messageId: string, text: string, targetLanguage: string) {
+    this.sendMessage({
+      type: "translate",
+      payload: { 
+        messageId,
+        text, 
+        targetLanguage 
+      }
+    });
+  }
+
+  detectLanguage(messageId: string, text: string) {
+    this.sendMessage({
+      type: "detectLanguage",
+      payload: { 
+        messageId,
+        text 
+      }
     });
   }
 

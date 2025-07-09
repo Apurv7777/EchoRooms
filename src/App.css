@@ -7,9 +7,6 @@ body, html, #root {
   margin: 0;
   padding: 0;
   overflow: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: #181818;
   color: #fff;
   font-family: 'Fira Mono', 'Consolas', 'Courier New', monospace;
@@ -19,34 +16,62 @@ body, html, #root {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 2.5rem;
+  gap: 1rem;
   background: #111;
-  padding: 1rem 1rem;
-  border-radius: 16px 16px;
+  padding: 0.75rem;
+  border-radius: 12px;
   margin-bottom: 1rem;
+  margin: 0 auto 1rem auto;
+  max-width: 95vw;
+}
+
+@media (min-width: 640px) {
+  .navbar {
+    gap: 2.5rem;
+    padding: 1rem;
+    border-radius: 16px;
+    max-width: 600px;
+  }
 }
 
 .nav-link {
   color: #fff;
   text-decoration: none;
   font-weight: bold;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
   font-family: 'Fira Mono', monospace;
   text-align: center;
-  padding: 0.5rem;
-  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
   position: relative;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .nav-link {
+    font-size: 1.1rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
 }
 
 .nav-link.active {
   color: #fff;
-  padding: 0.5rem ;
+  padding: 0.4rem 0.6rem;
   text-align: center;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px 8px;
+  border-radius: 6px;
   font-weight: 900;
   text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
+@media (min-width: 640px) {
+  .nav-link.active {
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
 }
 
 .nav-link:hover {

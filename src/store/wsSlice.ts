@@ -3,6 +3,12 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 export interface ChatMessage {
   name: string;
   message: string;
+  id?: string;
+  timestamp?: number;
+  originalMessage?: string;
+  translatedMessage?: string;
+  detectedLanguage?: string;
+  isTranslated?: boolean;
 }
 
 export interface WSState {
@@ -14,7 +20,26 @@ export interface WSState {
   currentUser: string;
   messages: ChatMessage[];
   error: string | null;
+  preferredLanguage: string | null;
+  autoTranslate: boolean;
 }
+
+const getStorageKey = (baseKey: string, userName?: string) => {
+  return userName ? `${baseKey}_${userName}` : baseKey;
+};
+
+const getUserSpecificStorage = (baseKey: string, userName?: string, defaultValue?: string) => {
+  if (!userName) return defaultValue || null;
+  return localStorage.getItem(getStorageKey(baseKey, userName)) || defaultValue || null;
+};
+
+const setUserSpecificStorage = (baseKey: string, userName: string, value: string | null) => {
+  if (value) {
+    localStorage.setItem(getStorageKey(baseKey, userName), value);
+  } else {
+    localStorage.removeItem(getStorageKey(baseKey, userName));
+  }
+};
 
 const initialState: WSState = {
   roomId: localStorage.getItem('echoroom_roomId') || '',
@@ -25,6 +50,8 @@ const initialState: WSState = {
   currentUser: '',
   messages: JSON.parse(localStorage.getItem('echoroom_messages') || '[]'),
   error: null,
+  preferredLanguage: null, // Will be loaded when userName is set
+  autoTranslate: false, // Will be loaded when userName is set
 };
 
 const wsSlice = createSlice({
@@ -44,8 +71,15 @@ const wsSlice = createSlice({
       state.userName = action.payload;
       if (action.payload) {
         localStorage.setItem('echoroom_userName', action.payload);
+        
+        // Load user-specific translation preferences
+        state.preferredLanguage = getUserSpecificStorage('echoroom_preferredLanguage', action.payload);
+        const autoTranslateStr = getUserSpecificStorage('echoroom_autoTranslate', action.payload, 'false') || 'false';
+        state.autoTranslate = JSON.parse(autoTranslateStr);
       } else {
         localStorage.removeItem('echoroom_userName');
+        state.preferredLanguage = null;
+        state.autoTranslate = false;
       }
     },
     
@@ -73,8 +107,49 @@ const wsSlice = createSlice({
     },
     
     addMessage: (state, action: PayloadAction<ChatMessage>) => {
-      state.messages.push(action.payload);
+      const message = {
+        ...action.payload,
+        id: action.payload.id || Date.now().toString(),
+        timestamp: action.payload.timestamp || Date.now()
+      };
+      state.messages.push(message);
       localStorage.setItem('echoroom_messages', JSON.stringify(state.messages));
+    },
+    
+    updateMessageTranslation: (state, action: PayloadAction<{
+      messageId: string;
+      translatedText: string;
+      detectedLanguage: string;
+      isTranslated: boolean;
+    }>) => {
+      const { messageId, translatedText, detectedLanguage, isTranslated } = action.payload;
+      const messageIndex = state.messages.findIndex(msg => msg.id === messageId);
+      
+      if (messageIndex !== -1) {
+        const message = state.messages[messageIndex];
+        if (!message.originalMessage) {
+          message.originalMessage = message.message;
+        }
+        message.translatedMessage = translatedText;
+        message.detectedLanguage = detectedLanguage;
+        message.isTranslated = isTranslated;
+        message.message = isTranslated ? translatedText : message.originalMessage;
+        localStorage.setItem('echoroom_messages', JSON.stringify(state.messages));
+      }
+    },
+    
+    toggleMessageTranslation: (state, action: PayloadAction<string>) => {
+      const messageId = action.payload;
+      const messageIndex = state.messages.findIndex(msg => msg.id === messageId);
+      
+      if (messageIndex !== -1) {
+        const message = state.messages[messageIndex];
+        if (message.originalMessage && message.translatedMessage) {
+          message.isTranslated = !message.isTranslated;
+          message.message = message.isTranslated ? message.translatedMessage : message.originalMessage;
+          localStorage.setItem('echoroom_messages', JSON.stringify(state.messages));
+        }
+      }
     },
     
     clearMessages: (state) => {
@@ -97,6 +172,20 @@ const wsSlice = createSlice({
     
     clearError: (state) => {
       state.error = null;
+    },
+
+    setPreferredLanguage: (state, action: PayloadAction<string | null>) => {
+      state.preferredLanguage = action.payload;
+      if (state.userName) {
+        setUserSpecificStorage('echoroom_preferredLanguage', state.userName, action.payload);
+      }
+    },
+
+    setAutoTranslate: (state, action: PayloadAction<boolean>) => {
+      state.autoTranslate = action.payload;
+      if (state.userName) {
+        setUserSpecificStorage('echoroom_autoTranslate', state.userName, JSON.stringify(action.payload));
+      }
     },
     
     disconnect: (state) => {
@@ -124,10 +213,14 @@ export const {
   setConnected,
   setConnectedUsers,
   addMessage,
+  updateMessageTranslation,
+  toggleMessageTranslation,
   clearMessages,
   clearMessagesIfRoomEmpty,
   setError,
   clearError,
+  setPreferredLanguage,
+  setAutoTranslate,
   disconnect,
 } = wsSlice.actions;
 

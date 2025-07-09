@@ -7,21 +7,23 @@ import "./App.css";
 
 const App: React.FC = () => {
   return (
-    <div>
+    <div className="min-h-screen w-full p-2 sm:p-4">
       <Router>
         <nav className="navbar">
-          <NavLink to="/create" className="nav-link">Create Room</NavLink>
-          <NavLink to="/join" className="nav-link">Join Room</NavLink>
-          <NavLink to="/chat" className="nav-link">Chat Room</NavLink>
+          <NavLink to="/create" className="nav-link">Create</NavLink>
+          <NavLink to="/join" className="nav-link">Join</NavLink>
+          <NavLink to="/chat" className="nav-link">Chat</NavLink>
         </nav>
-        <Routes>
-          <Route path="/create" element={<CreateRoom />} />
-          <Route path="/join" element={<JoinRoom />} />
-          <Route path="/chat" element={<ChatRoom />} />
-          <Route path="*" element={<CreateRoom />} />
-        </Routes>
+        <div className="flex justify-center items-center min-h-[calc(100vh-120px)]">
+          <Routes>
+            <Route path="/create" element={<CreateRoom />} />
+            <Route path="/join" element={<JoinRoom />} />
+            <Route path="/chat" element={<ChatRoom />} />
+            <Route path="*" element={<CreateRoom />} />
+          </Routes>
+        </div>
       </Router>
-      </div>
+    </div>
   );
 };
 

@@ -2,11 +2,13 @@ import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setRoomId, setUserName, disconnect } from '../store/wsSlice';
 import { WebSocketService } from '../services/WebSocketService';
+import { store } from '../store/store';
 
 interface WSContextType {
   joinRoom: (roomId: string, userName: string) => Promise<void>;
   disconnectRoom: () => void;
   sendMessage: (message: string) => void;
+  translateMessage: (messageId: string, text: string, targetLanguage: string) => void;
   wsService: WebSocketService | null;
 }
 
@@ -22,12 +24,12 @@ export const useWS = () => {
 
 export const WSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dispatch = useAppDispatch();
-  const { roomId, userName, isConnected } = useAppSelector(state => state.ws);
+  const { userName } = useAppSelector(state => state.ws);
   const wsServiceRef = useRef<WebSocketService | null>(null);
 
   // Initialize WebSocket service
   useEffect(() => {
-    wsServiceRef.current = new WebSocketService(dispatch);
+    wsServiceRef.current = new WebSocketService(dispatch, () => store.getState());
   }, [dispatch]);
 
   // Auto-reconnect effect
@@ -78,10 +80,17 @@ export const WSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   };
 
+  const translateMessage = (messageId: string, text: string, targetLanguage: string) => {
+    if (wsServiceRef.current) {
+      wsServiceRef.current.translateMessage(messageId, text, targetLanguage);
+    }
+  };
+
   const contextValue: WSContextType = {
     joinRoom,
     disconnectRoom,
     sendMessage,
+    translateMessage,
     wsService: wsServiceRef.current,
   };
 
