@@ -9,8 +9,7 @@ import {
   updateMessageTranslation,
 } from '../store/wsSlice';
 
-// const WS_URL = "wss://echorooms-backend.onrender.com";
-const WS_URL = "ws://localhost:8080";
+const WS_URL = "wss://echorooms-backend.onrender.com";
 
 export class WebSocketService {
   private ws: WebSocket | null = null;
