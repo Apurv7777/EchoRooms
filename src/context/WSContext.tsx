@@ -32,17 +32,9 @@ export const WSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     wsServiceRef.current = new WebSocketService(dispatch, () => store.getState());
   }, [dispatch]);
 
-  // Auto-reconnect effect
+  // Auto-reconnect effect - REMOVED for multi-user support
   useEffect(() => {
-    const storedRoomId = localStorage.getItem('echoroom_roomId');
-    const storedUserName = localStorage.getItem('echoroom_userName');
-    
-    if (storedRoomId && storedUserName && wsServiceRef.current) {
-      console.log('Auto-reconnecting to room:', storedRoomId, 'as:', storedUserName);
-      dispatch(setRoomId(storedRoomId));
-      dispatch(setUserName(storedUserName));
-      joinRoom(storedRoomId, storedUserName);
-    }
+    // Intentionally empty logic to prevent session persistence
   }, []);
 
   // Cleanup on unmount

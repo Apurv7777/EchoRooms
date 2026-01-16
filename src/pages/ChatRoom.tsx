@@ -2,48 +2,44 @@ import React, { useEffect, useRef, useState } from "react";
 import { useWS } from "../context/WSContext";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { clearMessagesIfRoomEmpty, setPreferredLanguage, setAutoTranslate } from "../store/wsSlice";
-import { LANGUAGES, getLanguageName } from "../utils/languages";
-import closeIcon from '../icons/close.svg';
+import { LANGUAGES } from "../utils/languages";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { motion, AnimatePresence } from "framer-motion";
+import { Send, Users, Globe, LogOut, Copy, Check, Home } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 const ChatRoom: React.FC = () => {
   const { disconnectRoom, sendMessage } = useWS();
   const dispatch = useAppDispatch();
-  const { 
-    roomId, 
-    userName, 
-    messages, 
-    connectedUsers, 
-    currentUser, 
-    isConnected, 
-    isConnecting, 
-    error,
-    preferredLanguage,
-    autoTranslate
+  const {
+    roomId,
+    userName,
+    messages,
+    connectedUsers,
+    currentUser,
+    isConnected,
+    preferredLanguage
   } = useAppSelector(state => state.ws);
-  
+
   const [input, setInput] = useState("");
-  const [showUsers, setShowUsers] = useState(false);
-  const [showLanguageSettings, setShowLanguageSettings] = useState(false);
-  const [languageSearch, setLanguageSearch] = useState("");
+  const [isSidebarOpen] = useState(true);
+  const [copied, setCopied] = useState(false);
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // Clear messages if user is alone in the room and then disconnects
   useEffect(() => {
-    if (roomId && connectedUsers.length === 1 && connectedUsers[0] === currentUser) {
-      // This user is alone in the room - messages will be cleared when they disconnect
-      console.log('User is alone in room, messages will be cleared on disconnect');
-    } else if (roomId && connectedUsers.length === 0) {
-      // Room is empty, clear messages
+    if (roomId && connectedUsers.length === 0) {
       dispatch(clearMessagesIfRoomEmpty());
     }
-  }, [connectedUsers, currentUser, roomId, dispatch]);
+  }, [connectedUsers, roomId, dispatch]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,238 +49,219 @@ const ChatRoom: React.FC = () => {
     }
   };
 
-  const handleClickOutsideTranslateMenu = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (!target.closest('.translate-menu') && !target.closest('.translate-button')) {
-      // Menu handling if needed
+  const handleLanguageChange = (code: string) => {
+    dispatch(setPreferredLanguage(code));
+    dispatch(setAutoTranslate(true));
+  };
+
+  const handleCopyId = () => {
+    if (roomId) {
+      navigator.clipboard.writeText(roomId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const handleLanguageChange = (languageCode: string) => {
-    dispatch(setPreferredLanguage(languageCode));
-    dispatch(setAutoTranslate(true));
-    setShowLanguageSettings(false);
-  };
-
-  const handleDisableAutoTranslate = () => {
-    dispatch(setAutoTranslate(false));
-    dispatch(setPreferredLanguage(null));
-    setShowLanguageSettings(false);
-    setLanguageSearch("");
-  };
-
-  // Filter languages based on search
-  const filteredLanguages = LANGUAGES.filter(lang => 
-    lang.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
-    lang.code.toLowerCase().includes(languageSearch.toLowerCase())
-  );
+  if (!roomId) {
+    return (
+      <div className="flex h-[70vh] items-center justify-center px-4">
+        <Card className="glass-card max-w-md w-full border-white/10 shadow-2xl">
+          <CardContent className="flex flex-col items-center text-center p-8 space-y-6">
+            <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+              <LogOut size={32} />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-display font-bold text-white">No Active Channel</h2>
+              <p className="text-white/40 font-sans">
+                You are currently not connected to any workspace. Return home to join or create one.
+              </p>
+            </div>
+            <Link to="/" className="w-full">
+              <Button variant="outline" className="w-full h-11 bg-white/5 border-white/10 hover:bg-white/10 text-white gap-2 font-display">
+                <Home size={16} /> Return Home
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-[#232323] rounded-2xl shadow-[0_0_24px_0_#00000044] py-4 px-4 sm:px-6 w-full max-w-[95vw] sm:max-w-[600px] min-h-[300px] flex flex-col items-center justify-center mx-auto">
-      <h1 className="text-white font-mono text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">Chat Room</h1>
-      
-      {/* Connection Status */}
-      {isConnecting && (
-        <div className="text-yellow-500 mb-3 text-center">
-          Connecting...
-        </div>
-      )}
-      
-      {error && (
-        <div className="text-red-500 mb-3 text-center">
-          {error}
-        </div>
-      )}
-      
-      {roomId ? (
-        <div className="w-full">
-          <div className="flex justify-center w-full mb-2">
-            <div className="text-white mb-2">
-              Connected to room: <b>{roomId}</b>
-              {isConnected && <span className="text-green-500 ml-2">●</span>}
-              {!isConnected && <span className="text-red-500 ml-2">●</span>}
+    <div className="flex h-[calc(100vh-120px)] w-full gap-4 max-w-7xl mx-auto">
+      {/* Sidebar - Desktop */}
+      <motion.div
+        className={cn(
+          "hidden md:flex flex-col w-80",
+          !isSidebarOpen && "md:w-0 overflow-hidden" // collapsible support if needed later
+        )}
+        initial={{ x: -50, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+      >
+        <Card className="h-full border-white/10 flex flex-col glass-card bg-black/40">
+          <CardHeader className="border-b border-white/5 pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs tracking-widest text-white/40 uppercase font-display font-bold">Channel ID</CardTitle>
+              <div className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" : "bg-red-500"}`} />
             </div>
-            <button
-              className="mb-4 flex bg-transparent border-0 text-red-500 items-center gap-1"
-              onClick={disconnectRoom}
-              title="Disconnect"
-            >
-              <img src={closeIcon} alt="Disconnect" className="cursor-pointer w-[18px] h-[18px] m-1" />
-            </button>
-          </div>
-          
-          {/* Users and Translation in one row */}
-          <div className="flex flex-col sm:flex-row gap-2 mb-4">
-            {/* Users Accordion */}
-            <div className="flex-1 bg-[#1a1a1a] rounded-lg shadow-[0_0_8px_#00000044] relative z-50">
-              <button
-                onClick={() => setShowUsers(!showUsers)}
-                className="w-full flex justify-between items-center p-3 text-white font-mono text-sm hover:bg-[#2a2a2a] transition-colors duration-200 rounded-lg relative z-50"
+            <div className="flex items-center gap-2 mt-2">
+              <div className="font-mono text-2xl font-bold text-white truncate flex-1 tracking-tight">#{roomId}</div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-white/40 hover:text-white hover:bg-white/10"
+                onClick={handleCopyId}
+                title="Copy Channel ID"
               >
-                <span>Users ({connectedUsers.length})</span>
-                <span className={`transform transition-transform duration-200 ${showUsers ? 'rotate-180' : ''}`}>
-                  ▼
-                </span>
-              </button>
-            
-            {showUsers && (
-              <>
-                {/* Backdrop blur overlay - positioned behind the accordion button */}
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30" onClick={() => setShowUsers(false)}></div>
-                
-                {/* Accordion content */}
-                <div className="absolute top-full left-0 right-0 z-50 bg-[#1a1a1a] rounded-b-lg shadow-[0_8px_24px_#00000066] border-t border-[#333]">
-                  <div className="px-3 pb-3 pt-2">
-                    {connectedUsers.length > 0 ? (
-                      <div className="space-y-1 max-h-32 overflow-y-auto chat-scrollbar">
-                        {connectedUsers.map((user, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center p-2 rounded text-xs font-mono bg-[#2a2a2a] text-[#cccccc]"
-                          >
-                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                            {user}{user === currentUser ? " (You)" : ""}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-[#888] text-xs font-mono p-2">
-                        No users connected
-                      </div>
-                    )}
+                {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-hidden flex flex-col gap-6 p-4">
+            {/* User List */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <h3 className="text-xs font-bold text-white/30 uppercase mb-3 flex items-center gap-2 font-display tracking-wider">
+                <Users size={12} /> Members ({connectedUsers.length})
+              </h3>
+              <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                {connectedUsers.map((user, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors group">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-inner">
+                      {user.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate text-white/90 group-hover:text-white transition-colors">{user}</div>
+                      <div className="text-[10px] text-white/40 font-mono">{user === currentUser ? "You" : "Online"}</div>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-          
-          {/* Language Settings */}
-          <div className="flex-1 bg-[#1a1a1a] rounded-lg shadow-[0_0_8px_#00000044] relative z-40">
-            <button
-              onClick={() => setShowLanguageSettings(!showLanguageSettings)}
-              className="w-full flex justify-between items-center p-3 text-white font-mono text-sm hover:bg-[#2a2a2a] transition-colors duration-200 rounded-lg relative z-40"
-            >
-              <span>
-                Translation: {autoTranslate && preferredLanguage ? getLanguageName(preferredLanguage) : 'Off'}
-              </span>
-              <span className={`transform transition-transform duration-200 ${showLanguageSettings ? 'rotate-180' : ''}`}>
-                ▼
-              </span>
-            </button>
+                ))}
+              </div>
+            </div>
 
-            {showLanguageSettings && (
-              <>
-                {/* Backdrop blur overlay */}
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30" onClick={() => setShowLanguageSettings(false)}></div>
-                
-                {/* Language selection content */}
-                <div className="absolute top-full left-0 right-0 z-40 bg-[#1a1a1a] rounded-b-lg shadow-[0_8px_24px_#00000066] border-t border-[#333]">
-                  <div className="px-3 pb-3 pt-2">
-                    <div className="space-y-1 max-h-48 overflow-y-auto chat-scrollbar">
-                      <button
-                        onClick={handleDisableAutoTranslate}
-                        className={`w-full text-left p-2 rounded text-xs font-mono transition-colors duration-200 ${
-                          !autoTranslate ? 'bg-[#2d5016] text-[#90ee90]' : 'bg-[#2a2a2a] text-[#cccccc] hover:bg-[#3a3a3a]'
-                        }`}
-                      >
-                        🚫 Disable Auto-Translation
-                      </button>
-                      <div className="text-[#888] text-xs font-mono px-2 py-1 border-t border-[#333]">
-                        Auto-translate incoming messages to:
-                      </div>
-                      {filteredLanguages.map((lang) => (
-                        <button
-                          key={lang.code}
-                          onClick={() => handleLanguageChange(lang.code)}
-                          className={`w-full text-left p-2 rounded text-xs font-mono transition-colors duration-200 ${
-                            autoTranslate && preferredLanguage === lang.code 
-                              ? 'bg-[#2d5016] text-[#90ee90]' 
-                              : 'bg-[#2a2a2a] text-[#cccccc] hover:bg-[#3a3a3a]'
-                          }`}
-                        >
-                          {lang.name}
-                        </button>
-                      ))}
-                      {filteredLanguages.length === 0 && languageSearch && (
-                        <div className="text-[#666] text-xs px-2 py-1">
-                          No languages found for "{languageSearch}"
+            {/* Language Config */}
+            <div className="shrink-0 bg-black/20 p-3 rounded-lg border border-white/5">
+              <h3 className="text-xs font-bold text-white/30 uppercase mb-2 flex items-center gap-2 font-display tracking-wider">
+                <Globe size={12} /> Translation
+              </h3>
+              <select
+                className="w-full bg-white/5 border border-white/10 rounded-md p-2 text-xs text-white/80 outline-none focus:border-white/20 font-sans transition-colors cursor-pointer hover:bg-white/10"
+                value={preferredLanguage || ""}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+              >
+                <option value="">Off (English)</option>
+                {LANGUAGES.map(lang => (
+                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+          <div className="p-4 border-t border-white/5 bg-white/5">
+            <Button variant="ghost" onClick={disconnectRoom} className="w-full gap-2 text-xs h-9 justify-start text-red-300 hover:text-red-200 hover:bg-red-500/10 font-medium">
+              <LogOut size={14} /> Leave Channel
+            </Button>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Main Chat Area */}
+      <motion.div
+        className="flex-1 h-full min-w-0"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="h-full flex flex-col border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+          {/* Mobile Header */}
+          <div className="md:hidden p-4 border-b border-white/5 flex items-center justify-between bg-black/20 backdrop-blur-md">
+            <div className="font-mono font-bold text-white">#{roomId}</div>
+            <Button size="sm" variant="ghost" onClick={disconnectRoom}>
+              <LogOut size={16} />
+            </Button>
+          </div>
+
+          {/* Messages */}
+          <div
+            className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth"
+            ref={chatBoxRef}
+          >
+            <AnimatePresence initial={false}>
+              {messages.map((msg, idx) => {
+                const isMe = msg.name === userName;
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className={cn(
+                      "flex w-full",
+                      isMe ? "justify-end" : "justify-start"
+                    )}
+                  >
+                    <div className={cn(
+                      "max-w-[85%] sm:max-w-[70%] flex gap-3",
+                      isMe ? "flex-row-reverse" : "flex-row"
+                    )}>
+                      {/* Avatar for others */}
+                      {!isMe && (
+                        <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/50 shrink-0 mt-1">
+                          {msg.name.charAt(0).toUpperCase()}
                         </div>
                       )}
+
+                      <div className={cn(
+                        "rounded-2xl p-3.5 shadow-sm relative group transition-all",
+                        isMe
+                          ? "bg-white text-black rounded-tr-sm"
+                          : "bg-white/10 text-white border border-white/5 rounded-tl-sm backdrop-blur-md"
+                      )}>
+
+                        {!isMe && (
+                          <div className="text-[10px] font-bold opacity-50 mb-1">{msg.name}</div>
+                        )}
+
+                        <div className="text-sm leading-relaxed break-words font-sans">
+                          {msg.message}
+                        </div>
+
+                        {msg.isTranslated && (
+                          <div className={cn(
+                            "mt-1.5 pt-1.5 border-t text-[10px] flex items-center gap-1 opacity-60 font-medium",
+                            isMe ? "border-black/5" : "border-white/10"
+                          )}>
+                            <Globe size={10} /> Translated
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    
-                    {/* Search input at the bottom */}
-                    <div className="mt-3 pt-3 border-t border-[#333]">
-                      <input
-                        type="text"
-                        placeholder="Search languages..."
-                        value={languageSearch}
-                        onChange={(e) => setLanguageSearch(e.target.value)}
-                        className="w-full py-2 px-3 rounded bg-[#2a2a2a] text-white text-xs font-mono outline-none border border-[#444] focus:border-[#555] placeholder-gray-400"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+                  </motion.div>
+                )
+              })}
+            </AnimatePresence>
           </div>
-        </div>
-        </div>
-      ) : (
-        <div className="text-red-500 mb-3">
-          Not connected to any room.
-        </div>
-      )}
-      
-      {/* Auto-translate status indicator */}
-      {roomId && autoTranslate && preferredLanguage && (
-        <div className="w-full text-center text-sm text-green-400 mb-1 mt-1 font-mono">
-          🌐 Auto-translating incoming messages to {getLanguageName(preferredLanguage)}
-        </div>
-      )}
-      
-      <div className="bg-[#0f0f0f] rounded-lg min-h-[160px] sm:min-h-[180px] max-h-[200px] sm:max-h-[240px] overflow-y-auto p-3 sm:p-4 shadow-[0_0_8px_#00000044] w-full flex flex-col chat-scrollbar" ref={chatBoxRef} onClick={handleClickOutsideTranslateMenu}>
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`p-2 sm:p-3 rounded-lg mb-2 sm:mb-3 shadow-[0_0_8px_#00000044] break-words font-mono max-w-[85%] sm:max-w-[80%] relative ${
-              msg.name === userName 
-                ? "self-end bg-[#2d5016] text-white ml-auto mr-0 text-right" 
-                : "self-start bg-[#1a1a1a] text-white mr-auto ml-0 text-left"
-            }`}
-          >
-            <div className={`text-xs mb-1 font-bold ${msg.name === userName ? "text-[#90ee90]" : "text-[#cccccc]"}`}>
-              {msg.name}
-              {msg.isTranslated && (
-                <span className="text-xs text-blue-400 ml-1 sm:ml-2">
-                  [Translated]
-                </span>
-              )}
-            </div>
-            <div className="text-white mb-1 sm:mb-2 text-sm sm:text-base">
-              {msg.message}
-            </div>
-            
+
+          {/* Input Area */}
+          <div className="p-4 bg-black/20 border-t border-white/5 backdrop-blur-md">
+            <form onSubmit={handleSendMessage} className="flex gap-3 items-end max-w-4xl mx-auto w-full">
+              <div className="flex-1 relative">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Type a message..."
+                  className="h-12 bg-white/5 border-white/10 focus:border-white/20 pl-4 pr-10 rounded-xl text-white placeholder:text-white/20 transition-colors"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={!input.trim()}
+                className="h-12 w-12 rounded-xl bg-white text-black hover:bg-white/90 shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <Send size={18} />
+              </Button>
+            </form>
           </div>
-        ))}
-      </div>
-      <form className="flex flex-col sm:flex-row pb-1.5 gap-2 w-full mt-3" onSubmit={handleSendMessage}>
-        <input
-          type="text"
-          className="flex-1 py-2 sm:py-3 px-3 sm:px-4 rounded-lg border-0 bg-[#181818] text-white text-sm sm:text-base w-full outline-none shadow-[0_0_8px_#00000044] font-mono placeholder-gray-400"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
-          disabled={!roomId}
-        />
-        <button 
-          type="submit" 
-          className="bg-white text-[#181818] border-0 rounded-lg py-2 sm:py-2 px-3 font-bold text-sm sm:text-base w-full sm:w-auto cursor-pointer shadow-[0_0_16px_#00000044] transition-all duration-200 font-mono hover:bg-[#e0e0e0] hover:text-[#111]" 
-          disabled={!roomId}
-        >
-          Send
-        </button>
-      </form>
+        </Card>
+      </motion.div>
     </div>
   );
 };
